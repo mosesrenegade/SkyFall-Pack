@@ -1,5 +1,13 @@
 #!/bin/bash
 
+# Function to convert header to lowercase and replace hyphens
+convert_header() {
+    local header=$1
+    # Convert to lowercase and replace hyphens with underscores
+    local converted=$(echo "$header" | tr '[:upper:]' '[:lower:]' | tr '-' '_')
+    echo "$converted"
+}
+
 # Initialize variables
 LOCATION=""
 USERNAME=""
@@ -7,8 +15,14 @@ PREFIX=""
 SSH_KEY=""
 DNS_NAME=""
 VM_SIZE=""
+KEYSTORE_FILE=""
+KEYSTORE_PASS=""
+TEAMSERVER_PORT="8443"  # Default port
+CUSTOM_HEADER="X-CSRF-TOKEN"  # Default header
+CUSTOM_SECRET="MySecretValue"  # Default secret
 PROJECT_ROOT="../"  # Navigate up from Script-Pack/ to SkyFall-Pack
 TFVARS_PATH="${PROJECT_ROOT}Terraform-Pack/terraform.tfvars"
+
 
 # Function to check if Azure CLI is installed
 CheckAzureCLI() {
@@ -111,22 +125,27 @@ CheckSize() {
 
 # Function to display usage
 usage() {
-   echo "Usage: $0 [-l|-location <value>] [-u|-username <value>] [-n|-name <value>] [-s|-ssh <value>] [-d|-dns <value>] [-v|-vm <value>]"
+   echo "Usage: $0 [-l|-location <value>] [-u|-username <value>] [-n|-name <value>] [-s|-ssh <value>] [-d|-dns <value>] [-v|-vm <value>] [f|-file <value>] [-p|-password <value>    ]"
    echo "All arguments are mandatory!"
    echo ""
    echo "Arguments:"
-   echo "  -l, -location    Azure region location"
-   echo "  -u, -username    VM username"
-   echo "  -n, -name        Resource name prefix"
-   echo "  -s, -ssh         SSH key name"
-   echo "  -d, -dns         DNS name prefix for public IP"
-   echo "  -v, -vm          VM size (optional) Default is Standard_B1ms"
+   echo "  -l, -location                  Azure region location"
+   echo "  -u, -username                  VM username"
+   echo "  -n, -name                      Resource name prefix"
+   echo "  -s, -ssh                       SSH key name"
+   echo "  -d, -dns                       DNS name prefix for public IP"
+   echo "  -v, -vm                        VM size (optional) Default is Standard_B1ms" 
+   echo "  -f, -file <string>             Set a keystore filename"
+   echo "  -p, -password <string>         Set a keystore password"
+   echo "      -port <int>                Teamserver port (default: 8443)"
+   echo "  -c, -custom-header <string>    Custom header name (default: X-CSRF-TOKEN)"
+   echo "  -s, -custom-secret <string>    Custom secret value (default: MySecretValue)"
    echo ""
    echo "Example with full flags:"
-   echo "  $0 -location westus2 -username nickvourd -name rt -ssh my-ssh-key -dns skyfall -vm Standard_B2s"
+   echo "  $0 -location westus2 -username nickvourd -name rt -ssh my-ssh-key -dns skyfall -vm Standard_B2s -file keystore_name -password password -custom-header X-CSRF-TOKEN2 -custom-secret TheValue"
    echo ""
    echo "Example with short flags:"
-   echo "  $0 -l westus2 -u nickvourd -n rt -s my-ssh-key -d skyfall -v Standard_B2s"
+   echo "  $0 -l westus2 -u nickvourd -n rt -s my-ssh-key -d skyfall -v Standard_B2s -f keystore_name -p password -c X-CSRF-TOKEN2 -s TheValue"
    echo ""
    exit 1
 }
@@ -158,6 +177,26 @@ while [[ $# -gt 0 ]]; do
            CheckSize "$2"
            shift 2
            ;;
+        -f|-file)
+            KEYSTORE_FILE="$2"
+            shift 2
+            ;;
+        -p|-password)
+            KEYSTORE_PASS="$2"
+            shift 2
+            ;;
+        --port)
+            TEAMSERVER_PORT="$2"
+            shift 2
+            ;;
+        -c|--custom-header)
+            CUSTOM_HEADER="$2"
+            shift 2
+            ;;
+        -s|--custom-secret)
+            CUSTOM_SECRET="$2"
+            shift 2
+            ;;
        *)
            echo "Error: Unknown parameter $1"
            usage
@@ -166,7 +205,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Check if all required parameters are provided
-if [ -z "$LOCATION" ] || [ -z "$USERNAME" ] || [ -z "$PREFIX" ] || [ -z "$SSH_KEY" ] || [ -z "$DNS_NAME" ] || [ -z "$VM_SIZE" ]; then
+if [ -z "$LOCATION" ] || [ -z "$USERNAME" ] || [ -z "$PREFIX" ] || [ -z "$SSH_KEY" ] || [ -z "$DNS_NAME" ] || [ -z "$VM_SIZE" ] || [ -z "$KEYSTORE_FILE" ] || [ -z "$KEYSTORE_PASS" ] || [ -z "$TEAMSERVER_PORT" ] || [ -z "$CUSTOM_HEADER" ] || [ -z "$CUSTOM_SECRET" ]; then
    echo "Error: All parameters are required!"
    usage
 fi
@@ -185,15 +224,22 @@ fi
 
 # Create a temporary file
 TMP_FILE=$(mktemp)
+export CUSTOM_HEADER_LOWER=$(convert_header "$CUSTOM_HEADER")
 
 # Replace values in terraform.tfvars
 cat > "$TMP_FILE" << EOF
 resource_group_location = "$LOCATION"
-username               = "$USERNAME"
-prefix                 = "$PREFIX"
-ssh_privkey           = "$SSH_KEY"
-dns_name              = "$DNS_NAME"
-size                  = "$VM_SIZE"
+username                = "$USERNAME"
+prefix                  = "$PREFIX"
+ssh_privkey             = "$SSH_KEY"
+dns_name                = "$DNS_NAME"
+size                    = "$VM_SIZE"
+keystore_filename       = "$KEYSTORE_FILE"
+keystore_password       = "$KEYSTORE_PASS"
+teamserver              = "$TEAMSERVER_PORT"
+custom_header           = "$CUSTOM_HEADER"
+custom_header_lower     = "$CUSTOM_HEADER_LOWER"
+custom_secret           = "$CUSTOM_SECRET"
 EOF
 
 # Move temporary file to terraform.tfvars in Terraform-Pack
@@ -206,6 +252,14 @@ echo "Resource Prefix: $PREFIX"
 echo "SSH Key Name: $SSH_KEY"
 echo "DNS Name: $DNS_NAME"
 echo "VM Size: $VM_SIZE"
+echo "Keystore Filename: $KEYSTORE_FILE"
+echo "Keystore Password: $KEYSTORE_PASS"
+echo "Keystore Filename: $KEYSTORE_FILENAME"
+echo "Keystore Password: $KEYSTORE_PASS"
+echo "Teamserver Port: $TEAMSERVER_PORT"
+echo "Custom Header: $CUSTOM_HEADER"
+echo "Custom Header Lower: $CUSTOM_HEADER_LOWER"
+echo "Custom Secret: $CUSTOM_SECRET"
 echo ""
 
 # Store current location
@@ -229,7 +283,7 @@ terraform apply -auto-approve
 # Get connection information
 echo -e "\n[*] Getting connection information...\n"
 echo -e "[*] Connection String:"
-terraform output connection_string
+terraform output -raw connection_string
 echo -e "\n[*] FQDN:"
 terraform output fqdn
 echo -e "\n[*] Public IP:"

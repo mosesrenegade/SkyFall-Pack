@@ -108,7 +108,7 @@ export CUSTOM_HEADER_LOWER=$(convert_header "$CUSTOM_HEADER")
 # Set environment variables from terraform output
 export VM_IP=$(terraform output -raw public_ip)
 export VM_USER=$(terraform output -raw username)
-export SSH_KEY_PATH="$(pwd)/$(terraform output -raw ssh_privkey).pem"
+export SSH_KEY_PATH="$(pwd)/$(terraform output -raw ssh_privkey)"
 export VM_FQDN=$(terraform output -raw fqdn)
 export KEYSTORE_FILENAME=$KEYSTORE_FILE
 export KEYSTORE_PASSWORD=$KEYSTORE_PASS

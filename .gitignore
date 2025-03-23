@@ -62,3 +62,8 @@ override.tf.json
 # Ignore CLI configuration files
 .terraformrc
 terraform.rc
+
+# Ensure all .terraform files are not committed.
+*/**/.terraform*
+*/**/terraform.tfvars
+*/**/files/*

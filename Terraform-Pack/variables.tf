@@ -35,5 +35,43 @@ variable "dns_name" {
 variable "size" {
   type        = string
   description = "Azure VM size"
-  default     = "Standard_B1ms" 
+  default     = "Standard_B1ms"
+}
+
+# Keystore filename
+variable "keystore_filename" {
+  type        = string
+  description = "Keystore Filename"
+  default     = "keystore_filename"
+}
+
+# Keystore Password
+variable "keystore_password" {
+  type        = string
+  description = "Keystore Password"
+  default     = "keystore_password"
+}
+
+# Custom HTTP Header for TeamServer
+variable "custom_header" {
+  type        = string
+  description = "Customer Header for TeamServer"
+}
+
+# Custom HTTP Header for TeamServer
+variable "custom_header_lower" {
+  type        = string
+  description = "Customer Header for TeamServer in Lowercase"
+}
+
+# Custom HTTP Secret for TeamServer
+variable "custom_secret" {
+  type        = string
+  description = "Customer Secret for TeamServer in Lowercase"
+}
+
+# TeamServer Port
+variable "teamserver" {
+  type        = string
+  description = "Teamserver Port Default is 8443"
 }
